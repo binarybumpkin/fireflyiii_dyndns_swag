@@ -1,0 +1,82 @@
+version: '3.3'
+
+services:
+  app:
+    container_name: fireflyiii_app
+    hostname: fireflyiiiapp
+# Instead of just using the docker image, rebuild it to generate specific locale with Dockerfile.
+    build: 
+      context: .
+      dockerfile: Dockerfile.fireflyiiiapp
+    restart: unless-stopped
+    volumes:
+      - ./volumes/app/var/html/storage/upload:/var/www/html/storage/upload
+    env_file: .env
+# Browser access is not via 8081 (to container 8080) directly, but via SWAG SSL frontend 44381
+# SWAG Nginx Config to reverse proxy to fireflyiii_app on container internal port 8080
+#    ports:
+#      - 8081:8080
+    depends_on:
+      - db
+  db:
+    container_name: fireflyiii_db
+    image: postgres:latest
+    hostname: fireflyiiidb
+    restart: unless-stopped
+# No DB external listening required, all internal to containers
+#    ports:
+#      - 5432:5432
+    environment:
+      - POSTGRES_USER=firefly
+      - POSTGRES_PASSWORD=secret_firefly_password
+      - MYSQL_DATABASE=firefly
+    volumes:
+      - ./volumes/db/var/lib/postgresql:/var/lib/postgresql
+      - ./volumes/db/var/lib/postgresql/data:/var/lib/postgresql/data
+# Not using ddclient, because image uses 3.9.x (not 3.10.x) which doesn't support Cloudflare API tokens. 
+#  ddclient:
+#    image: lscr.io/linuxserver/ddclient:latest
+#    container_name: fireflyiii_ddclient
+#    environment:
+#      - PUID=1000
+#      - PGID=1000
+#      - TZ=
+#    volumes:
+#      - ./volumes/ddclient/config:/config
+#    restart: unless-stopped
+#  cloudflare-ddns:
+#    container_name: fireflyiii_ddns
+#    image: oznu/cloudflare-ddns:latest
+#    restart: always
+#    environment:
+#      - API_KEY=
+#      - ZONE=mydomain.com
+#      - SUBDOMAIN=subdomain
+#      - PROXIED=false
+  swag:
+    image: lscr.io/linuxserver/swag:latest
+    container_name: swag
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=
+      - URL=subdomain.mydomain.com
+      - VALIDATION=http
+#      - SUBDOMAINS=www, #optional
+#      - CERTPROVIDER= #optional
+#      - DNSPLUGIN=cloudflare #optional
+#      - PROPAGATION= #optional
+#      - DUCKDNSTOKEN= #optional
+#      - EMAIL= #optional
+#      - ONLY_SUBDOMAINS=false #optional
+#      - EXTRA_DOMAINS= #optional
+#      - STAGING=false #optional
+    volumes:
+      - ./volumes/swag/config:/config
+    ports:
+      - 44381:443
+#      - 80:80 # Enable for Lets Encrypt
+    restart: unless-stopped
+

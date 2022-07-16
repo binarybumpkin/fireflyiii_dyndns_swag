@@ -1,0 +1,10 @@
+FROM fireflyiii/core:latest
+
+RUN apt-get update && apt-get install -y locales
+# Set the locale
+RUN sed -i '/en_AU.UTF-8/s/^# //g' /etc/locale.gen && \
+    locale-gen
+ENV LANG en_AU.UTF-8  
+ENV LANGUAGE en_AU:en  
+ENV LC_ALL en_AU.UTF-8  
+
